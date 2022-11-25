@@ -1,0 +1,346 @@
+// This file is part of rubyexport.
+//
+// rubyexport is free software: you can redistribute it and/or modify it under
+// the terms of the GNU General Public License as published by the Free Software
+// Foundation, either version 3 of the License, or (at your option) any later
+// version.
+//
+// rubyexport is distributed in the hope that it will be useful, but WITHOUT ANY
+// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+// PARTICULAR PURPOSE. See the GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along with
+// rubyexport. If not, see <https://www.gnu.org/licenses/>.
+
+Reflection library for C++
+==========================
+Steven Coenen <steven@easics.be>
+:icons: font
+:numbered:
+:toc: left
+:source-highlighter: coderay
+
+Introduction
+------------
+
+Reflection in a programming language is the ability to examing and modify the
+structure and/or behavior (specifically the values and functions) at runtime.
+
+The key part of that sentence is 'at runtime'.  e.g. given an instance of a
+class, with reflection you can get a list of methods that class provides, and
+call one of those methods.
+
+Some languages - mostly scripting languages - provide reflection in the
+language.  e.g. in Ruby you can call the method `methods` on an instance to get
+a list of available methods.  Python has a similar thing using the `dir`
+function.
+
+.Ruby
+[source,ruby]
+----
+irb> 1.methods()
+=> [:to_s, :-@, :+, :-, :*, :/, :div, :%, :modulo, :divmod, :fdiv, :**, :abs, :magnitude, :==, :===, :<=>, :>, :>=, :<, :<=, :~, :&, :|, :^, :[], :<<, :>>, :to_f, :size, :zero?, :odd?, :even?, :succ, :integer?, :upto, :downto, :times, :next, :pred, :chr, :ord, :to_i, :to_int, :floor, :ceil, :truncate, :round, :gcd, :lcm, :gcdlcm, :numerator, :denominator, :to_r, :rationalize, :singleton_method_added, :coerce, :i, :+@, :eql?, :quo, :remainder, :real?, :nonzero?, :step, :to_c, :real, :imaginary, :imag, :abs2, :arg, :angle, :phase, :rectangular, :rect, :polar, :conjugate, :conj, :between?, :nil?, :=~, :!~, :hash, :class, :singleton_class, :clone, :dup, :initialize_dup, :initialize_clone, :taint, :tainted?, :untaint, :untrust, :untrusted?, :trust, :freeze, :frozen?, :inspect, :methods, :singleton_methods, :protected_methods, :private_methods, :public_methods, :instance_variables, :instance_variable_get, :instance_variable_set, :instance_variable_defined?, :instance_of?, :kind_of?, :is_a?, :tap, :send, :public_send, :respond_to?, :respond_to_missing?, :extend, :display, :method, :public_method, :define_singleton_method, :object_id, :to_enum, :enum_for, :equal?, :!, :!=, :instance_eval, :instance_exec, :__send__, :__id__]
+
+----
+
+.Python
+[source,python]
+----
+python> a = 5; dir(a)
+['__abs__', '__add__', '__and__', '__class__', '__cmp__', '__coerce__', '__delattr__', '__div__', '__divmod__', '__doc__', '__float__', '__floordiv__', '__format__', '__getattribute__', '__getnewargs__', '__hash__', '__hex__', '__index__', '__init__', '__int__', '__invert__', '__long__', '__lshift__', '__mod__', '__mul__', '__neg__', '__new__', '__nonzero__', '__oct__', '__or__', '__pos__', '__pow__', '__radd__', '__rand__', '__rdiv__', '__rdivmod__', '__reduce__', '__reduce_ex__', '__repr__', '__rfloordiv__', '__rlshift__', '__rmod__', '__rmul__', '__ror__', '__rpow__', '__rrshift__', '__rshift__', '__rsub__', '__rtruediv__', '__rxor__', '__setattr__', '__sizeof__', '__str__', '__sub__', '__subclasshook__', '__truediv__', '__trunc__', '__xor__', 'bit_length', 'conjugate', 'denominator', 'imag', 'numerator', 'real']
+----
+
+To call such a method, use `send` in Ruby or `getattr` in Python.
+
+.Ruby
+[source,ruby]
+----
+irb> 1.send(1.methods()[0]) -- <1>
+=> "1"
+----
+<1> first method in the list is `to_s`
+
+.Python
+[source,python]
+----
+python> getattr(a, 'bit_length')()
+3
+----
+
+Note that both cases you need to do some extra effort with the elements from the
+list (the methods).  In Ruby, you get symbols, which can be `send` to an object
+or converted into a method with the `method` instance method.  In Python you get
+a list of strings, which can be used with the global functions getattr and
+setattr.  To be sure it is a method, you first have to check the attribute with
+`callable`.  The number of arguments the method has is not available (`arity` in
+Ruby).
+
+In both cases - because both languages are not strongly typed - the type of the
+arguments can not be retrieved.  So you get methods of an object, but the
+arguments to pass to it's call are not known.
+
+In {cpp}, none of this is available in the language.  If you write for example a
+template class, there is no way to retrieve the list of methods or members from
+the template argument.
+
+[source,cpp]
+----
+template <typename T>
+class WrapThing
+{
+  WrapThing() { auto l = a.methods(); } // <1>
+  T a;
+};
+----
+<1> doesn't compile (if type T doesn't have a public method `methods`)
+
+The Reflection library aims to add this functionality with as little syntactic
+sugar as possible.
+
+.example
+[source,cpp]
+----
+class Example
+{
+  Example(int x);
+  void foo() const;
+  std::string x_;
+};
+
+REFLECTED_CLASS(Example)
+  .def_c(Reflection::init<int>()) // <1>
+  .DEF_F(foo)                     // <2>
+  .DEF_A(x_);                     // <3>
+}
+----
+<1> Constructor with int argument
+<2> foo method
+<3> x_ member
+
+As you can see, the class definition is almost copied for use with the
+reflection macros.  The is the consequence of not having reflection in the
+language.  The reflection must be added manually.  The library stores this
+reflection information which can later on be retrieved.
+
+Usage
+-----
+
+Adding reflection info
+~~~~~~~~~~~~~~~~~~~~~~
+
+To add reflection for classes, the user must write following information
+
+- In a file called _ReflectionImplement.h_, define what the reflection library
+  should do when reading or writing variables.
+- For each class that needs reflection, write one of the REFLECTED_CLASS macros
+  followed by the class information that needs to be reflected.
+
+ReflectionImplement.h
+^^^^^^^^^^^^^^^^^^^^^
+
+This file should define the following:
+
+* A type _ReflectionHandle_ that stores information about a variable.
+  What to store, depends on the user application. +
+  This type is used when reading and writing variables.
+* For each type where no REFLECTED_CLASS macro is available, define 2 functions
+  These function are mostly define for builtin types like `int` and `char`, but
+  also for template classes like `std::vector`.
+** `ReflectionHandle ReflectionRead(<TYPE> value, void * data)` +
+   This function should convert _value_ to a ReflectionHandle, whatever that
+   is in the user application.  It can be a something like a QVariant or
+   PyObject*, or a class/union with several possibilities. +
+   The _data_ argument is passed verbatim from the caller of this function.
+   e.g. from `Reflection::MethodBase::call` to call a method of an instance.
+** `void ReflectionWrite(ReflectionHandle handle, <TYPE> & value,void * data)` +
+   This should do the inverse of _ReflectionRead_, i.e. convert a
+   ReflectionHandle into TYPE.
+* Define 2 template functions that convert classes with a REFLECTED_CLASS macro.
+  The function should do conversions like the non-template functions.
+** `template <typename T>` +
+   `ReflectionHandle ReflectionRead(<TYPE> value, void * data)` +
+** `template <typename T>` +
+   `void ReflectionWrite(ReflectionHandle handle, <TYPE> & value, void * data)`
+* Define a class _ReflectionClassInfo_.  It should store info on a reflected
+  class (if any info is required).
+* Define a template function that creates a instance of _ReflectionClassInfo_
+  for the given type T +
+  `template <typename T>` +
+  `ReflectionClassInfo * ReflectionMakeClassInfo()`
+* Define a template function that checks the type for compatibility with the
+  reflection library.  e.g. if all reflected class should be derived from a
+  specific base class in the user application, the user can add a static_assert
+  check in this function. +
+  `template <typename T>` +
+  `void ReflectionCheckType()`
+* Define a function that returns the _nil_/_null_ value : an instance of
+  ReflectionHandle that represents the concept of nothing. The _data_ argument
+  is the same as for _ReflectionRead_. +
+  `ReflectionHandle ReflectionNil(void * data)`
+
+Reflecting a class
+^^^^^^^^^^^^^^^^^^
+
+To add reflection for a class, write one of the 2 REFLECTED_CLASS macros
+followed by the contents of the class that must be reflected.
+
+The 2 REFLECTED_CLASS macros are :
+
+* `REFLECTED_CLASS(classname)` +
+  Note that there is _no_ opening {, it is included in the macro (and it is not
+  the last character in the macro definition)
+* `REFLECTED_CLASS_DERIVED(classname, baseclassname)` +
+  Use this macro if you want the reflection to know that _classname_ is derived
+  from _baseclassname_.  It will inherit all reflection info from the base
+  class, just like in the actual C++.
+
+These macros are defined in `ReflectionRegistry.h`, so that file must be
+included.  The macros actually instantiate a `Reflection::Class`.  To add
+reflection info, methods from that class must be called.  The methods of
+`Reflection::Class` all return a reference to _this_, so the calls can be
+chained together.
+
+The items from a class that can be reflected are :
+
+* Constructors +
+  For each constructor add 1 line like this : +
+  `.def_c(Reflection::init<signature>())` +
+  Replace _signature_ with a comma separated list of argument types the
+  constructor accepts.  The argument type must not be exact.  C++ must be able
+  to make the conversion. e.g. if a constructor has a `const std::string &`
+  argument type, it is good enough to specify `std::string` as template argument
+  for _init_.
+* Public members. +
+  The type can be either a type where the _ReflectionRead_ and _ReflectionWrite_
+  functions are defined, or a pointer to a type where the template versions of
+  the 2 functions are defined (for REFLECTED_CLASS types). +
+  `.def_a("foo", &classname::foo)` +
+  This can be shortened, using a little macro magic, to +
+  `.DEF_A(foo)` +
+* Public methods (can be static). +
+  The argument types and the return type must adhere to the same rules as for
+  public members (_ReflectionRead_ and _ReflectionWrite_ must be implemented).
+  Currently a method can have at most 6 arguments. +
+  `.def_f("bar", &classname::bar)` +
+  If the class defines only 1 bar method, this can be shortened, using a little
+  macro magic, to +
+  `.DEF_F(bar)` +
+  If the class defines multiples methods with the same name (but different
+  signature), a bit more verbosity is required +
+  `.def_f("bar", (ReturnType*(classname::*)(MyArgType*))&classname::bar)` +
+  where everything except _def_f_ are user defined names.  This example reflects
+  a method with 1 argument of type `pointer to MyArgType` and it returns a value
+  of type `pointer to ReturnType`.
+* Public enums +
+  Enums are a bit more complex and can't be reflected with as little syntactic
+  sugar as members and methods. For a enum, the _def_e_ method must be called
+  with as argument an instance of `Reflection::Enum<enumtype>`.  Each enum value
+  should be added to that instance with the _value_ method.  An example should
+  make things clear :
+
+[source,cpp]
+.Enum example
+----
+  .def_e(Reflection::Enum<MyClass::EnumType>()
+         .value("START", MyClass::START)
+         .value("STOP",  MyClass::STOP))
+----
+
+
+Close the REFLECTED_CLASS definition with a ; and a }
+
+Using the reflection information
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Before the reflection information can be used, an init function must be called
+at the start of the program.
+`ReflectionRegistry::instance().init()`
+
+To access the reflected information, the `Reflection::Registry` singleton must
+be used.  It has 4 user accessible methods:
+
+#Reflection::Registry#
+
+* `instance()` +
+  Return a reference to the only instantation of the class.
+* `Reflection::ClassArray getClasses() const` +
+  Return an array of all reflected classes.  Each element is of type
+  `Reflection::ClassBase*` which is explained below.  The array is sorted by
+  inheritance, i.e. base classes come before derived classes.
+* `Reflection::ClassBase * getClass(const std::string & name) const` +
+  Get the reflection info for one specific class.  Returns _nullptr_ if the
+  class is not reflected.  The name is the typeid().name() of the class, not the
+  name the user have given.  This is because you can do `typeid(T).name()` in a
+  template class without knowing the actual name of T.
+* `init()` +
+  This method must be called once at the start of the program.
+
+Following classes contain the reflected information
+
+#Reflection::ClassBase#
+
+* `std::string getName() const` +
+  Return the class name as written by the user
+* `std::string getTypeIdName() const` +
+  Return `typeid().name()` of the class.
+* `std::string getPointerTypeIdName() const` +
+  Return `typeid().name()` of a pointer to the class.
+* `Reflection::ClassBase * getParent1() const` +
+  Get the base class reflection info of this class.  If the class has no base
+  class, 0 is returned
+* `ReflectionClassInfo * getClassInfo()  const` +
+  Get the user defined class information for this class.  This was created using
+  the user defined template function `ReflectionMakeClassInfo`.
+* `Reflection::ClassBase::AttributeMap * getAttributeMap() const` +
+  Return a map of all reflected members of the class.  The map maps member names
+  to `Reflection::AttributeBase*` instances.
+* `Reflection::ClassBase::MethodMap * getMethodMap() const` +
+  Return a map of all reflected methods of the class.  The map maps method names
+  to `Reflection::MethodBase*` instances.
+* `Reflection::ClassBase::ConstructorArray * getConstructorArray() const` +
+  Return an array all reflected constructors of the class.  The instances of the
+  array are of type `Reflection::ConstructorBase*`.
+* `Reflection::ClassBase::EnumArray * getEnumArray() const` +
+  Return an array all reflected enums of the class.  The instances of the
+  array are of type `Reflection::EnumBase*`.
+
+#Reflection::AttributeBase#
+
+* `ReflectionHandle getter(void * self, void * data)` +
+  Get the value of a member by calling the appropriate _ReflectionRead_
+  function.  Note that there is no type check on _self_, it must be of the
+  correct type.  The _data_ argument is passed to _ReflectionRead_.
+* `ReflectionHandle setter(void * self, void * data, ReflectionHandle value)` +
+  Set the value of a member by calling the appropriate _ReflectionWrite_
+
+#Reflection::MethodBase#
+
+* `ReflectionHandle call(void * self, void * data,` +
+  `ReflectionHandle a1, ReflectionHandle a2` +
+  `ReflectionHandle a3, ReflectionHandle a4` +
+  `ReflectionHandle a5, ReflectionHandle a6)` +
+  Call the method.  Only the actual number of arguments used by the method will
+  actually be read.  e.g. if the method has 5 arguments, _a6_ will not be
+  evaluated by the _call_ method. +
+  Arguments that are used are first converted using _ReflectionWrite_ and the
+  passed to the method call.
+* `unsigned int getNumArgs() const` +
+  Return the number of arguments the method has.
+* `bool isStatic() const` +
+  Return true if the method is a static class method.
+
+#Reflection::ConstructorBase#
+
+* `void * call(void * data,` +
+  `ReflectionHandle a1, ReflectionHandle a2` +
+  `ReflectionHandle a3, ReflectionHandle a4` +
+  `ReflectionHandle a5, ReflectionHandle a6)` +
+  Call the constructor and return _this_.  Used arguments are first converted
+  using _ReflectionWrite_.
+* `const std::vector<std::string> & signature() const` +
+  Return the signature (argument types) of the constructor.
+
+#Reflection::EnumBase#
+
+* `std::map<std::string,int> enumValues_` +
+  Contains a name to integer value map for all the reflected enum values.
