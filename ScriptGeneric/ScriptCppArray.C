@@ -20,6 +20,8 @@
 #endif
 
 #ifdef SCRIPT_RUBY
+#include <ruby/version.h>
+
 VALUE ScriptCppArrayBase::rubyClassType_ = 0;
 
 namespace // anonymous

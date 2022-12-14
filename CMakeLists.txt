@@ -15,16 +15,45 @@
 cmake_minimum_required(VERSION 3.16.3)
 project(rubyexport LANGUAGES CXX)
 
+## Target libraries
+add_library(rubyexport STATIC)
+
 ## Settings
 option(SCRIPT_RUBY "Support Ruby scripts" OFF)
 option(SCRIPT_PYTHON "Support Python scripts" OFF)
 
-if(SCRIPT_RUBY)
+if (SCRIPT_RUBY)
   add_compile_definitions(SCRIPT_RUBY)
+
+  # Ruby dependencies
+  find_package(Ruby REQUIRED)
+
+  if (RUBY_VERSION_MAJOR VERSION_EQUAL "2" AND
+      RUBY_VERSION_MINOR VERSION_EQUAL "7")
+    message(FATAL_ERROR "Ruby version 2.7.x is not supported")
+  endif()
+
+  target_include_directories(rubyexport
+    PRIVATE
+      ${RUBY_INCLUDE_DIRS}
+      ${Python_INCLUDE_DIRS}
+  )
+
+  target_link_libraries(rubyexport ${RUBY_LIBRARY})
 endif()
 
-if(SCRIPT_PYTHON)
+if (SCRIPT_PYTHON)
   add_compile_definitions(SCRIPT_PYTHON)
+
+  # Python dependencies
+  find_package(Python REQUIRED COMPONENTS Interpreter Development)
+
+  target_include_directories(rubyexport
+    PRIVATE
+      ${Python_INCLUDE_DIRS}
+  )
+
+  target_link_libraries(rubyexport ${Python_LIBRARY})
 endif()
 
 if (NOT (SCRIPT_RUBY OR SCRIPT_PYTHON))
@@ -32,31 +61,12 @@ if (NOT (SCRIPT_RUBY OR SCRIPT_PYTHON))
                       "SCRIPT_RUBY, SCRIPT_PYTHON or both")
 endif()
 
-## Target libraries
-add_library(rubyexport STATIC)
-
-## Package dependencies
-find_package(Ruby REQUIRED)
-
-if (RUBY_VERSION_MAJOR VERSION_EQUAL "2" AND
-    RUBY_VERSION_MINOR VERSION_EQUAL "7")
-  message(FATAL_ERROR "Ruby version 2.7.x is not supported")
-endif()
-
-find_package(Python REQUIRED COMPONENTS Interpreter Development)
-
+# Package dependencies
 target_include_directories(rubyexport
   PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/ScriptGeneric
     ${CMAKE_CURRENT_SOURCE_DIR}/Reflection/src
-
-  PRIVATE
-    ${RUBY_INCLUDE_DIRS}
-    ${RUBY_INCLUDE_DIR}/ruby
-    ${Python_INCLUDE_DIRS}
 )
-
-target_link_libraries(rubyexport ${RUBY_LIBRARY} ${Python_LIBRARY})
 
 ## Sources
 add_subdirectory(ScriptGeneric)

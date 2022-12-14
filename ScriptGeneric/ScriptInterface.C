@@ -33,7 +33,7 @@
 #include "rb_protect_wrap.h"
 #include "RubyException.h"
 #include <ruby.h>
-#include <version.h>
+#include <ruby/version.h>
 #if __has_include(<ruby/vm.h>)
 #include <ruby/vm.h>
 #endif

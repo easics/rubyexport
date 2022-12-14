@@ -16,7 +16,7 @@
 #include "RubyException.h"
 #include <sstream>
 #include <ruby.h>
-#include <version.h>
+#include <ruby/version.h>
 
 RubyException::RubyException(const std::string & rubyExceptionName,
                              const std::string & backtrace,

@@ -15,15 +15,29 @@
 ## File list
 target_sources(rubyexport
   PRIVATE
-    rb_protect_wrap.C
     ReflectionImplement.C
     ScriptAccess.C
     ScriptReference.C
-    PythonException.C
     RubyPythonReference.C
     ScriptInterface.C
     ScriptObject.C
     ScriptReferenceFactory.C
-    RubyException.C
     ScriptCppArray.C
 )
+
+# Only needed for Ruby support
+if (SCRIPT_RUBY)
+  target_sources(rubyexport
+    PRIVATE
+      rb_protect_wrap.C
+      RubyException.C
+  )
+endif()
+
+# Only needed for Python support
+if (SCRIPT_PYTHON)
+  target_sources(rubyexport
+    PRIVATE
+      PythonException.C
+  )
+endif()
