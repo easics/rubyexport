@@ -1256,9 +1256,19 @@ bool typeIdMatches(const std::string & id1, const std::string & id2)
         return true;
       if (id2 == typeid(unsigned int).name())
         return true;
+      if (id2 == typeid(int).name())
+        return true;
       if (id2 == typeid(char).name())
         return true;
       if (id2 == typeid(unsigned char).name())
+        return true;
+      if (id2 == typeid(unsigned long).name())
+        return true;
+      if (id2 == typeid(long int).name())
+        return true;
+      if (id2 == typeid(long long int).name())
+        return true;
+      if (id2 == typeid(unsigned long long).name())
         return true;
     }
   // Maybe id1 (Ruby type) is nil and id2 is a pointer

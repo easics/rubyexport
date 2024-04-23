@@ -121,6 +121,25 @@ ReflectionHandle ReflectionRead(long unsigned int value, void * data)
   return result;
 }
 
+ReflectionHandle ReflectionRead(long int value, void * data)
+{
+  ReflectionHandle result;
+#ifdef SCRIPT_RUBY
+  if (data == LANGUAGE_RUBY)
+    result.rubyHandle = LONG2NUM(value);
+#endif
+#ifdef SCRIPT_PYTHON
+  if (data == LANGUAGE_PYTHON)
+#if PY_MAJOR_VERSION == 2
+    result.pythonHandle = PyInt_FromLong(value);
+#endif
+#if PY_MAJOR_VERSION == 3
+    result.pythonHandle = PyLong_FromLong(value);
+#endif
+#endif
+  return result;
+}
+
 ReflectionHandle ReflectionRead(bool value, void * data)
 {
   ReflectionHandle result;
@@ -167,6 +186,20 @@ ReflectionHandle ReflectionRead(unsigned long long value, void * data)
 #ifdef SCRIPT_PYTHON
   if (data == LANGUAGE_PYTHON)
     result.pythonHandle = PyLong_FromUnsignedLongLong(value);
+#endif
+  return result;
+}
+
+ReflectionHandle ReflectionRead(long long int value, void * data)
+{
+  ReflectionHandle result;
+#ifdef SCRIPT_RUBY
+  if (data == LANGUAGE_RUBY)
+    result.rubyHandle = LL2NUM(value);
+#endif
+#ifdef SCRIPT_PYTHON
+  if (data == LANGUAGE_PYTHON)
+    result.pythonHandle = PyLong_FromLongLong(value);
 #endif
   return result;
 }
@@ -396,6 +429,42 @@ void ReflectionWrite(ReflectionHandle handle, long unsigned int & value,
 #endif
 }
 
+void ReflectionWrite(ReflectionHandle handle, long int & value, void * data)
+{
+#ifdef SCRIPT_RUBY
+  if (data == LANGUAGE_RUBY)
+    value = NUM2LONG(handle.rubyHandle);
+#endif
+#ifdef SCRIPT_PYTHON
+  if (data == LANGUAGE_PYTHON)
+    {
+      if (!PyNumber_Check(handle.pythonHandle))
+        throw std::runtime_error("argument is not of numeric type");
+#if PY_MAJOR_VERSION == 2
+      if (PyInt_Check(handle.pythonHandle))
+        {
+          value = PyInt_AsLong(handle.pythonHandle);
+#endif
+#if PY_MAJOR_VERSION == 3
+      if (PyLong_Check(handle.pythonHandle))
+        {
+          value = PyLong_AsLong(handle.pythonHandle);
+#endif
+          if (PyErr_Occurred())
+            throw std::runtime_error("integer conversion failed");
+        }
+      else if (PyLong_Check(handle.pythonHandle))
+        {
+          value = PyLong_AsLong(handle.pythonHandle);
+          if (PyErr_Occurred())
+            throw std::runtime_error("integer conversion failed");
+        }
+      else
+        throw std::runtime_error("unknown numeric type");
+    }
+#endif
+}
+
 void ReflectionWrite(ReflectionHandle handle, bool & value, void * data)
 {
 #ifdef SCRIPT_RUBY
@@ -478,18 +547,58 @@ void ReflectionWrite(ReflectionHandle handle, unsigned long long & value,
     {
       if (!PyNumber_Check(handle.pythonHandle))
         throw std::runtime_error("argument is not of numeric type");
-#if PY_MAJOR_VERSION == 2      
+#if PY_MAJOR_VERSION == 2
       if (PyInt_Check(handle.pythonHandle))
 #endif
 #if PY_MAJOR_VERSION == 3
       if (PyLong_Check(handle.pythonHandle))
 #endif
         {
-#if PY_MAJOR_VERSION == 2          
-          value = PyInt_AsLong(handle.pythonHandle);
+#if PY_MAJOR_VERSION == 2
+          value = PyInt_AsUnsignedLongLong(handle.pythonHandle);
 #endif
 #if PY_MAJOR_VERSION == 3
-          value = PyLong_AsLong(handle.pythonHandle);
+          value = PyLong_AsUnsignedLongLong(handle.pythonHandle);
+#endif
+          if (PyErr_Occurred())
+            throw std::runtime_error("integer conversion failed");
+        }
+      else if (PyLong_Check(handle.pythonHandle))
+        {
+          value = PyLong_AsUnsignedLongLong(handle.pythonHandle);
+          if (PyErr_Occurred())
+            throw std::runtime_error("integer conversion failed");
+        }
+      else
+        throw std::runtime_error("unknown numeric type");
+    }
+#endif
+}
+
+void ReflectionWrite(ReflectionHandle handle, long long int & value,
+                     void * data)
+{
+#ifdef SCRIPT_RUBY
+  if (data == LANGUAGE_RUBY)
+    value = NUM2LL(handle.rubyHandle);
+#endif
+#ifdef SCRIPT_PYTHON
+  if (data == LANGUAGE_PYTHON)
+    {
+      if (!PyNumber_Check(handle.pythonHandle))
+        throw std::runtime_error("argument is not of numeric type");
+#if PY_MAJOR_VERSION == 2
+      if (PyInt_Check(handle.pythonHandle))
+#endif
+#if PY_MAJOR_VERSION == 3
+      if (PyLong_Check(handle.pythonHandle))
+#endif
+        {
+#if PY_MAJOR_VERSION == 2
+          value = PyInt_AsLongLong(handle.pythonHandle);
+#endif
+#if PY_MAJOR_VERSION == 3
+          value = PyLong_AsLongLong(handle.pythonHandle);
 #endif
           if (PyErr_Occurred())
             throw std::runtime_error("integer conversion failed");

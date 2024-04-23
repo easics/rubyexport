@@ -59,10 +59,12 @@ ReflectionHandle ReflectionRead(short value, void * data);
 ReflectionHandle ReflectionRead(unsigned short value, void * data);
 ReflectionHandle ReflectionRead(int value, void * data);
 ReflectionHandle ReflectionRead(unsigned int value, void * data);
+ReflectionHandle ReflectionRead(long int value, void * data);
 ReflectionHandle ReflectionRead(long unsigned int value, void * data);
 ReflectionHandle ReflectionRead(bool value, void * data);
 ReflectionHandle ReflectionRead(const std::string & value, void * data);
 ReflectionHandle ReflectionRead(unsigned long long value, void * data);
+ReflectionHandle ReflectionRead(long long int value, void * data);
 ReflectionHandle ReflectionRead(double value, void * data);
 ReflectionHandle ReflectionRead(const ScriptObject & value, void * data);
 ReflectionHandle ReflectionRead(const char * value, void * data);
@@ -75,9 +77,12 @@ void ReflectionWrite(ReflectionHandle handle, unsigned int & value,
                      void * data);
 void ReflectionWrite(ReflectionHandle handle, long unsigned int & value,
                      void * data);
+void ReflectionWrite(ReflectionHandle handle, long int & value, void * data);
 void ReflectionWrite(ReflectionHandle handle, bool & value, void * data);
 void ReflectionWrite(ReflectionHandle handle, std::string & value, void * data);
 void ReflectionWrite(ReflectionHandle handle, unsigned long long & value,
+                     void * data);
+void ReflectionWrite(ReflectionHandle handle, long long int & value,
                      void * data);
 void ReflectionWrite(ReflectionHandle handle, double & value,
                      void * data);
@@ -130,9 +135,11 @@ void ReflectionUpdate(ReflectionHandle handle, short value, void * data);
 void ReflectionUpdate(ReflectionHandle handle, unsigned short value, void * data);
 void ReflectionUpdate(ReflectionHandle handle, int value, void * data);
 void ReflectionUpdate(ReflectionHandle handle, unsigned int value, void * data);
+void ReflectionUpdate(ReflectionHandle handle, long int value, void * data);
 void ReflectionUpdate(ReflectionHandle handle, bool value, void * data);
 void ReflectionUpdate(ReflectionHandle handle, const std::string & value, void * data);
 void ReflectionUpdate(ReflectionHandle handle, unsigned long long value, void * data);
+void ReflectionUpdate(ReflectionHandle handle, long long int value, void * data);
 void ReflectionUpdate(ReflectionHandle handle, double value, void * data);
 void ReflectionUpdate(ReflectionHandle handle, const ScriptObject & value, void * data);
 void ReflectionUpdate(ReflectionHandle handle, const char * value, void * data);

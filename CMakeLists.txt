@@ -12,7 +12,7 @@
 # You should have received a copy of the GNU General Public License along with
 # rubyexport. If not, see <https://www.gnu.org/licenses/>.
 
-cmake_minimum_required(VERSION 3.16.3)
+cmake_minimum_required(VERSION 3.16.1)
 project(rubyexport LANGUAGES CXX)
 
 ## Target libraries
@@ -36,10 +36,9 @@ if (SCRIPT_RUBY)
   target_include_directories(rubyexport
     PRIVATE
       ${RUBY_INCLUDE_DIRS}
-      ${Python_INCLUDE_DIRS}
   )
 
-  target_link_libraries(rubyexport ${RUBY_LIBRARY})
+  target_link_libraries(rubyexport ${RUBY_LIBRARIES})
 endif()
 
 if (SCRIPT_PYTHON)
@@ -53,7 +52,7 @@ if (SCRIPT_PYTHON)
       ${Python_INCLUDE_DIRS}
   )
 
-  target_link_libraries(rubyexport ${Python_LIBRARY})
+  target_link_libraries(rubyexport ${Python_LIBRARIES})
 endif()
 
 if (NOT (SCRIPT_RUBY OR SCRIPT_PYTHON))

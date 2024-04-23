@@ -384,6 +384,7 @@ VALUE ScriptCppArray_setelement(int argc, VALUE * argv, VALUE ary)
   long index = 0;
   auto result = rb_ary_aset(argc, argv, ary, index);
   cppSelf->ruby_setelement(index, result);
+
   return result;
 }
 
@@ -453,14 +454,14 @@ VALUE ScriptCppArray_each(VALUE self)
   if (!rb_block_given_p())
     throw std::runtime_error("each without a block is not supported");
   auto cppSelf = readPointer(self);
-  cppSelf->clear();
   VALUE result = Qnil;
   for (unsigned int i=0; i<RARRAY_LEN(self); ++i)
     {
       VALUE v = RARRAY_PTR(self)[i];
       rb_yield(v);
       result = self;
-      cppSelf->ruby_push(v);
+      cppSelf->ruby_setelement(i, v);
+      rb_ary_store(self, i, v);
     }
   return result;
 }

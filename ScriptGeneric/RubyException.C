@@ -14,7 +14,6 @@
 
 
 #include "RubyException.h"
-#include <sstream>
 #include <ruby.h>
 #include <ruby/version.h>
 
@@ -48,7 +47,10 @@ void RubyException::checkRubyException(int state) // static
           else
             {
               VALUE epath = rb_class_path(eclass);
+              // throw RubyException(RSTRING_PTR(epath), "no backtrace", RSTRING_PTR(einfo));
               VALUE info = rb_funcall(error, rb_intern("backtrace"), 0);
+              if (TYPE(info) != T_ARRAY)
+                throw RubyException(RSTRING_PTR(epath), "can't get backtrace", RSTRING_PTR(einfo));
               VALUE joined = rb_ary_join(info, rb_str_new2("\n"));
 
               throw RubyException(RSTRING_PTR(epath),
